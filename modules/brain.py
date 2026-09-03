@@ -8,7 +8,7 @@ from modules.memory import (
 
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL = "gemma3"
+MODEL = "gemma3:1b"
 
 
 # Create the database when the assistant starts
@@ -24,10 +24,11 @@ def ask_assistant(user_message):
         {
             "role": "system",
             "content": (
-                "You are Yash Assistant, a helpful personal AI voice assistant. "
-                "Your name is Yash Assistant. "
-                "Keep your answers friendly and concise. "
-                "Do not use emojis because your responses will be spoken aloud."
+            "You are Yash Assistant, a helpful personal AI voice assistant. "
+            "Your name is Yash Assistant. "
+            "Answer naturally and briefly. "
+            "For simple questions, answer in 1-3 sentences. "
+            "Do not repeat the user's question."
             ),
         }
     ]
@@ -44,10 +45,15 @@ def ask_assistant(user_message):
     )
 
     data = {
-        "model": MODEL,
-        "messages": messages,
-        "stream": False,
-    }
+    "model": MODEL,
+    "messages": messages,
+    "stream": False,
+    "keep_alive": "30m",
+    "options": {
+        "temperature": 0.5,
+        "num_predict": 80,
+    },
+}
 
     try:
         response = requests.post(
