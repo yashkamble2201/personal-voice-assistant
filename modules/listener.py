@@ -1,49 +1,50 @@
-import json
-import queue
 import sounddevice as sd
-from vosk import Model, KaldiRecognizer
+import numpy as np
+from faster_whisper import WhisperModel
 
 
-MODEL_PATH = "models/vosk-model-small-en-in-0.4"
-
-model = Model(MODEL_PATH)
+# Faster-Whisper model
+# "base" = good balance between speed and accuracy
+model = WhisperModel(
+    "base",
+    device="cpu",
+    compute_type="int8"
+)
 
 
 def listen():
-    q = queue.Queue()
+    print("🎤 Listening...")
 
-    def callback(indata, frames, time, status):
-        if status:
-            print(status)
-
-        q.put(bytes(indata))
-
-    device_info = sd.query_devices(kind="input")
-    sample_rate = int(device_info["default_samplerate"])
-
-    recognizer = KaldiRecognizer(model, sample_rate)
-    recognizer.SetWords(False)
-
-    print("🎙️ Listening...")
+    sample_rate = 16000
+    duration = 5
 
     try:
-        with sd.RawInputStream(
+        audio = sd.rec(
+            int(duration * sample_rate),
             samplerate=sample_rate,
-            blocksize=8000,
-            dtype="int16",
             channels=1,
-            callback=callback,
-        ):
-            while True:
-                data = q.get()
+            dtype="float32"
+        )
 
-                if recognizer.AcceptWaveform(data):
-                    result = json.loads(recognizer.Result())
-                    text = result.get("text", "").strip()
+        sd.wait()
 
-                    if text:
-                        return text
+        audio = np.squeeze(audio)
+
+        segments, info = model.transcribe(
+            audio,
+            language="en",
+            beam_size=1,
+            vad_filter=True
+        )
+
+        text = " ".join(segment.text for segment in segments).strip()
+
+        if text:
+            return text
+
+        print("⚠️ I didn't hear anything.")
+        return ""
 
     except Exception as error:
-        print(f"⚠️ Listening error: {error}")
+        print(f"❌ Speech recognition error: {error}")
         return ""
