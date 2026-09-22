@@ -4,7 +4,6 @@ from faster_whisper import WhisperModel
 
 
 # Faster-Whisper model
-# "base" = good balance between speed and accuracy
 model = WhisperModel(
     "base",
     device="cpu",
@@ -37,7 +36,9 @@ def listen():
             vad_filter=True
         )
 
-        text = " ".join(segment.text for segment in segments).strip()
+        text = " ".join(
+            segment.text for segment in segments
+        ).strip()
 
         if text:
             return text
